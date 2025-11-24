@@ -1,7 +1,6 @@
 <template>
   <section class="page-shell">
     <header>
-      <p class="eyebrow">Доступ для прихожан</p>
       <h1>Войти в личный кабинет</h1>
       <p>Используйте e-mail и пароль, указанные при регистрации.</p>
     </header>
