@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import {useAuthStore} from "~/stores/mainStore";
+
+const authStore = useAuthStore();
+const {user} = storeToRefs(authStore);
 
 const isMenuOpen = ref(false);
 
@@ -29,7 +33,7 @@ const closeMenu = () => {
       <NuxtLink to="/repose" @click="closeMenu">За упокой</NuxtLink>
     </nav>
 
-    <NuxtLink to="/login" class="login-btn">Войти</NuxtLink>
+    <NuxtLink to="/login" class="login-btn" v-if="!user">Войти</NuxtLink>
   </header>
 </template>
 

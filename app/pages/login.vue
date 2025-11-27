@@ -5,16 +5,30 @@
       <p>Используйте e-mail и пароль, указанные при регистрации.</p>
     </header>
 
-    <form class="form-card" @submit.prevent>
-      <label>
-        Электронная почта
-        <input type="email" name="email" placeholder="name@example.com" required>
-      </label>
-      <label>
-        Пароль
-        <input type="password" name="password" placeholder="••••••••" required minlength="6">
-      </label>
-      <button type="submit">Войти</button>
+    <form class="form-card" @submit.prevent="handleSubmit" novalidate>
+      <p v-if="submitError" class="form-error">{{ submitError }}</p>
+
+      <AuthorizationInput
+        v-model:data="loginForm.email"
+        title="Электронная почта"
+        placeholder="name@example.com"
+        :validation="vLogin$.email"
+        :type="'email'"
+        :error="mapErrors(vLogin$.email.$errors)[0]"
+      />
+
+      <AuthorizationInput
+        v-model:data="loginForm.password"
+        title="Пароль"
+        placeholder="••••••••"
+        :validation="vLogin$.password"
+        :type="'password'"
+        :error="mapErrors(vLogin$.password.$errors)[0]"
+      />
+
+      <button type="submit" :disabled="isSubmitting">
+        {{ isSubmitting ? "Входим..." : "Войти" }}
+      </button>
       <p class="hint">
         Еще не зарегистрированы?
         <NuxtLink to="/register">Создать аккаунт</NuxtLink>
@@ -22,6 +36,50 @@
     </form>
   </section>
 </template>
+
+<script setup lang="ts">
+import useVuelidate from "@vuelidate/core";
+import {email, minLength, required} from "@vuelidate/validators";
+import {ref} from "vue";
+import AuthorizationInput from "~/components/auth/AuthorizationInput.vue";
+import validation from "~/mixins/validation";
+import authRequests from "~/mixins/requests/auth";
+
+const {mapErrors} = validation();
+const {login} = authRequests();
+
+const loginForm = ref({
+  email: "",
+  password: "",
+});
+
+const rulesLogin = {
+  email: {required, email},
+  password: {required, minLength: minLength(6)},
+};
+
+const vLogin$ = useVuelidate(rulesLogin, loginForm);
+const submitError = ref<string | null>(null);
+const isSubmitting = ref(false);
+
+function handleSubmit() {
+  submitError.value = null;
+  vLogin$.value.$touch();
+  if (vLogin$.value.$error) return;
+
+  isSubmitting.value = true;
+  login({
+    email: loginForm.value.email,
+    password: loginForm.value.password,
+  })
+    .then(response => {
+      if (response?.data?.error) {
+        submitError.value = response.data.message;
+      }
+      isSubmitting.value = false;
+    })
+}
+</script>
 
 <style scoped>
 .page-shell {
@@ -62,21 +120,6 @@ header p {
   background-color: #fff;
 }
 
-label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.95rem;
-  gap: 0.25rem;
-  color: #0f172a;
-}
-
-input {
-  border: 1px solid #cbd5f5;
-  border-radius: 12px;
-  padding: 0.8rem 1rem;
-  font-size: 1rem;
-}
-
 button {
   margin-top: 0.5rem;
   padding: 0.9rem 1rem;
@@ -102,6 +145,13 @@ button:hover {
 .hint a {
   color: #2563eb;
 }
+
+.form-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
 </style>
-
-

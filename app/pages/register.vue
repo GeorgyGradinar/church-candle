@@ -80,10 +80,18 @@ const rulesRegistration = {
 
 const vRegistration$ = useVuelidate(rulesRegistration, registrationForm.value);
 
+let submitError = ref(null);
+
 function handleSubmit() {
   vRegistration$.value.$validate();
   if (!vRegistration$.value.$error) {
-    registration(registrationForm.value);
+    registration(registrationForm.value)
+      .then(response => {
+        if (response?.data?.error) {
+          submitError.value = response.data.message;
+        }
+        isSubmitting.value = false;
+      })
   }
 
 

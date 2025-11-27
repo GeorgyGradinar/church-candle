@@ -1,0 +1,1 @@
+export const CANDLE_USER_KEY = "candle_user_data";

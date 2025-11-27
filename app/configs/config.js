@@ -5,11 +5,6 @@ export const API_URL = () => {
   return config.public.API_URL
 }
 
-export const API_URL_SOCKET = () => {
-  const config = useRuntimeConfig();
-  return config.public.API_SOCKET
-}
-
 export const HEADER_PARAMETERS = {
   content: {
     key: "Content-Type",
