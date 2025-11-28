@@ -3,6 +3,7 @@ import getHeaders from "~/mixins/createHeaders.js";
 import { useAuthStore } from "~/stores/mainStore.js";
 import storage from "~/mixins/localStorage.js";
 import { CANDLE_USER_KEY } from "~/configs/localStorageKeys.js";
+import { handle401Error } from "~/utils/errorHandler.js";
 
 export default function authRequests() {
   const header = [HEADER_PARAMETERS.accept, HEADER_PARAMETERS.content];
@@ -25,7 +26,10 @@ export default function authRequests() {
     const header = [HEADER_PARAMETERS.accept, HEADER_PARAMETERS.content, HEADER_PARAMETERS.authorization];
     $fetch(`https://saint.botinex.ru/auth/me`, getHeaders("GET", header))
       .then(response => {
-        setUser(response.user);
+        setUser({ ...user.value, ...response.user });
+      })
+      .catch(error => {
+        handle401Error(error);
       })
   }
 
@@ -39,6 +43,7 @@ export default function authRequests() {
         router.push('/');
       })
       .catch(error => {
+        handle401Error(error);
         return error;
       })
   }
@@ -53,6 +58,7 @@ export default function authRequests() {
         router.push('/');
       })
       .catch((error) => {
+        handle401Error(error);
         return error;
       })
   }

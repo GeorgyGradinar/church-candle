@@ -9,5 +9,11 @@ export default function storage() {
         return saved ? JSON.parse(saved) : '';
     }
 
-    return {setLocalStorage, getLocalStorage}
+    function removeLocalStorage(KEY) {
+        if (process.client) {
+            localStorage.removeItem(KEY);
+        }
+    }
+
+    return {setLocalStorage, getLocalStorage, removeLocalStorage}
 }
