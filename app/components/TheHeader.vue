@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { storeToRefs } from "pinia";
 import {useAuthStore} from "~/stores/mainStore";
 
 const authStore = useAuthStore();
@@ -31,6 +32,7 @@ const closeMenu = () => {
     <nav :class="['nav-links', { open: isMenuOpen }]">
       <NuxtLink to="/living" @click="closeMenu">За здравие</NuxtLink>
       <NuxtLink to="/repose" @click="closeMenu">За упокой</NuxtLink>
+      <NuxtLink to="/prayers" @click="closeMenu">Молитвы</NuxtLink>
     </nav>
 
     <NuxtLink to="/login" class="login-btn" v-if="!user">Войти</NuxtLink>
