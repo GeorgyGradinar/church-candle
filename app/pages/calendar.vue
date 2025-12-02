@@ -1,28 +1,12 @@
 <template>
   <section class="page-shell">
-    <header class="page-header">
-      <p class="eyebrow">Церковный календарь</p>
-      <h1>Православный календарь</h1>
-      <p class="description">
-        Праздники, дни памяти святых и другие значимые события церковного года
-      </p>
-    </header>
+    <CalendarHeader />
 
     <!-- Переключатель вида -->
-    <div class="view-switcher">
-      <button
-        @click="viewMode = 'calendar'"
-        :class="['view-btn', { active: viewMode === 'calendar' }]"
-      >
-        📅 Календарь
-      </button>
-      <button
-        @click="viewMode = 'list'"
-        :class="['view-btn', { active: viewMode === 'list' }]"
-      >
-        📋 Список
-      </button>
-    </div>
+    <ViewSwitcher
+      :view-mode="viewMode"
+      @update:view-mode="switchView"
+    />
 
     <!-- Фильтры -->
     <CalendarFilters
@@ -34,6 +18,7 @@
       <MonthNavigation
         :month-name="currentMonthName"
         :year="currentYear"
+        :month="currentMonth"
         @previous="previousMonth"
         @next="nextMonth"
         @today="goToToday"
@@ -50,7 +35,10 @@
     <EventsList
       v-if="viewMode === 'list'"
       :events="filteredListEvents"
-      v-model:selected-month="selectedMonth"
+      :selected-month="selectedMonth"
+      :selected-year="selectedYear"
+      @update:selected-month="updateSelectedMonth"
+      @update:selected-year="updateSelectedYear"
       @select-event="selectEvent"
     />
 
@@ -66,18 +54,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import {
   monthNames,
   getEventsByDate,
   getEventsByMonth,
 } from '~/configs/orthodoxCalendarData.js';
+import CalendarHeader from '~/components/calendar/CalendarHeader.vue';
 import CalendarFilters from '~/components/calendar/CalendarFilters.vue';
 import MonthNavigation from '~/components/calendar/MonthNavigation.vue';
 import CalendarGrid from '~/components/calendar/CalendarGrid.vue';
 import EventsList from '~/components/calendar/EventsList.vue';
 import DayDetailsModal from '~/components/calendar/DayDetailsModal.vue';
+import ViewSwitcher from '~/components/calendar/ViewSwitcher.vue';
 
 // SEO - получаем URL сайта из переменных окружения
 const config = useRuntimeConfig();
@@ -162,6 +152,7 @@ useHead({
 });
 
 const router = useRouter();
+const route = useRoute();
 
 // Состояние компонента
 const viewMode = ref<'calendar' | 'list'>('calendar');
@@ -169,6 +160,7 @@ const selectedCategory = ref<string | null>(null);
 const currentMonth = ref(new Date().getMonth() + 1); // 1-12
 const currentYear = ref(new Date().getFullYear());
 const selectedMonth = ref(new Date().getMonth() + 1);
+const selectedYear = ref(new Date().getFullYear()); // Для режима списка
 const selectedDate = ref<any>(null);
 const showModal = ref(false);
 
@@ -263,6 +255,67 @@ const selectedDateEvents = computed(() => {
   return selectedDate.value.events || [];
 });
 
+// Переключение вида отображения
+function switchView(view: 'calendar' | 'list') {
+  viewMode.value = view;
+  
+  // Обновляем URL
+  const query: any = {
+    view
+  };
+  
+  // Убираем date если модалка закрыта
+  if (route.query.date && showModal.value) {
+    query.date = route.query.date;
+  }
+  
+  // В режиме календаря добавляем год и месяц
+  if (view === 'calendar') {
+    query.year = currentYear.value;
+    query.month = currentMonth.value;
+  }
+  
+  // В режиме списка добавляем месяц и год
+  if (view === 'list') {
+    query.month = selectedMonth.value;
+    query.year = selectedYear.value;
+  }
+  
+  router.push({ query });
+}
+
+// Обновление выбранного месяца в списке
+function updateSelectedMonth(month: number) {
+  selectedMonth.value = month;
+  
+  // Обновляем URL
+  if (viewMode.value === 'list') {
+    router.push({
+      query: {
+        ...route.query,
+        month,
+        year: selectedYear.value
+      }
+    });
+  }
+}
+
+// Обновление выбранного года в списке
+function updateSelectedYear(year: number) {
+  selectedYear.value = year;
+  
+  // Обновляем URL
+  if (viewMode.value === 'list') {
+    router.push({
+      query: {
+        ...route.query,
+        month: selectedMonth.value,
+        year
+      }
+    });
+  }
+}
+
 // Методы навигации
 function previousMonth() {
   if (currentMonth.value === 1) {
@@ -271,6 +324,9 @@ function previousMonth() {
   } else {
     currentMonth.value--;
   }
+  
+  // Обновляем URL
+  updateCalendarUrl();
 }
 
 function nextMonth() {
@@ -280,35 +336,80 @@ function nextMonth() {
   } else {
     currentMonth.value++;
   }
+  
+  // Обновляем URL
+  updateCalendarUrl();
 }
 
 function goToToday() {
   currentMonth.value = todayMonth;
   currentYear.value = todayYear;
+  
+  // Обновляем URL
+  updateCalendarUrl();
+}
+
+// Обновление URL для режима календаря
+function updateCalendarUrl() {
+  if (viewMode.value === 'calendar') {
+    router.push({
+      query: {
+        ...route.query,
+        view: 'calendar',
+        year: currentYear.value,
+        month: currentMonth.value
+      }
+    });
+  }
 }
 
 // Методы выбора даты/события
 function selectDate(day: any) {
   selectedDate.value = day;
   showModal.value = true;
+  
+  // Добавляем параметр в URL
+  const dateString = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`;
+  router.push({
+    query: {
+      ...route.query,
+      date: dateString
+    }
+  });
 }
 
 function selectEvent(event: any) {
+  // В режиме списка используем selectedYear
+  const yearToUse = viewMode.value === 'list' ? selectedYear.value : currentYear.value;
+  
   const day = {
     day: event.day,
     month: event.month,
-    year: currentYear.value,
+    year: yearToUse,
     events: [event]
   };
   selectedDate.value = day;
   showModal.value = true;
+  
+  // Добавляем параметр в URL
+  const dateString = `${yearToUse}-${String(event.month).padStart(2, '0')}-${String(event.day).padStart(2, '0')}`;
+  router.push({
+    query: {
+      ...route.query,
+      date: dateString
+    }
+  });
 }
 
 function closeModal() {
   showModal.value = false;
-  setTimeout(() => {
-    selectedDate.value = null;
-  }, 300);
+  
+  // Убираем параметр из URL
+  const query = { ...route.query };
+  delete query.date;
+  router.push({ query });
+  
+  // Не сбрасываем selectedDate, чтобы дата оставалась подсвеченной
 }
 
 function lightCandle(event: any) {
@@ -322,6 +423,91 @@ function lightCandle(event: any) {
     }
   });
 }
+
+// Проверяем URL при загрузке страницы
+onMounted(() => {
+  // Восстанавливаем тип отображения из URL
+  const viewParam = route.query.view as string;
+  if (viewParam === 'list' || viewParam === 'calendar') {
+    viewMode.value = viewParam;
+  }
+  
+  // Восстанавливаем год и месяц для режима календаря
+  if (viewMode.value === 'calendar') {
+    const yearParam = route.query.year as string;
+    const monthParam = route.query.month as string;
+    
+    if (yearParam) {
+      const year = parseInt(yearParam);
+      if (year >= 1900 && year <= 2100) {
+        currentYear.value = year;
+      }
+    }
+    
+    if (monthParam) {
+      const month = parseInt(monthParam);
+      if (month >= 1 && month <= 12) {
+        currentMonth.value = month;
+      }
+    }
+  }
+  
+  // Восстанавливаем месяц и год для режима списка
+  if (viewMode.value === 'list') {
+    const yearParam = route.query.year as string;
+    const monthParam = route.query.month as string;
+    
+    if (yearParam) {
+      const year = parseInt(yearParam);
+      const currentYear = new Date().getFullYear();
+      // Разрешаем только текущий и будущие годы (до +10 лет)
+      if (year >= currentYear && year <= currentYear + 10) {
+        selectedYear.value = year;
+      }
+    }
+    
+    if (monthParam) {
+      const month = parseInt(monthParam);
+      if (month >= 1 && month <= 12) {
+        selectedMonth.value = month;
+      }
+    }
+  }
+  
+  // Восстанавливаем дату из URL
+  const dateParam = route.query.date as string;
+  if (dateParam) {
+    // Парсим дату из URL формата YYYY-MM-DD
+    const [year, month, day] = dateParam.split('-').map(Number);
+    
+    if (year && month && day) {
+      // Устанавливаем текущий месяц и год
+      currentYear.value = year;
+      currentMonth.value = month;
+      
+      // Если в режиме списка, обновляем selectedMonth
+      if (viewMode.value === 'list') {
+        selectedMonth.value = month;
+      }
+      
+      // Получаем события для этой даты
+      const events = getEventsByDate(month, day);
+      
+      // Создаем объект дня и открываем модальное окно
+      const dateObj = {
+        day,
+        month,
+        year,
+        isCurrentMonth: true,
+        isToday: false,
+        events
+      };
+      
+      selectedDate.value = dateObj;
+      showModal.value = true;
+    }
+  }
+});
 </script>
 
 <style scoped lang="scss">
@@ -334,62 +520,6 @@ function lightCandle(event: any) {
   overflow-x: hidden;
 }
 
-.page-header {
-  margin-bottom: 2.5rem;
-  text-align: center;
-
-  .eyebrow {
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #64748b;
-    font-size: 0.8rem;
-    margin-bottom: 0.75rem;
-  }
-
-  h1 {
-    margin-bottom: 0.5rem;
-    color: #0f172a;
-    font-size: 2.5rem;
-  }
-
-  .description {
-    color: #475569;
-    line-height: 1.5;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-}
-
-.view-switcher {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-bottom: 2rem;
-
-  .view-btn {
-    padding: 0.75rem 1.5rem;
-    border: 1px solid #cbd5f5;
-    border-radius: 12px;
-    background: #fff;
-    color: #475569;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 500;
-
-    &:hover {
-      border-color: #0ea5e9;
-      color: #0ea5e9;
-    }
-
-    &.active {
-      background: #0ea5e9;
-      border-color: #0ea5e9;
-      color: #fff;
-    }
-  }
-}
-
 @media (max-width: 1024px) {
   .page-shell {
     padding: 2.5rem 1rem 3.5rem;
@@ -399,17 +529,6 @@ function lightCandle(event: any) {
 @media (max-width: 768px) {
   .page-shell {
     padding: 2rem 0.75rem 3rem;
-  }
-
-  .page-header {
-    h1 {
-      font-size: 1.75rem;
-    }
-  }
-
-  .view-switcher .view-btn {
-    font-size: 0.9rem;
-    padding: 0.65rem 1.25rem;
   }
 }
 

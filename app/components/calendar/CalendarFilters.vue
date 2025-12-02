@@ -2,8 +2,8 @@
   <div class="filters-section">
     <div class="categories">
       <button
-        v-for="category in categories"
-        :key="category.id"
+        v-for="(category, index) in categories"
+        :key="category.id ?? `category-${index}`"
         @click="$emit('update:selectedCategory', category.id)"
         :class="['category-btn', { active: props.selectedCategory === category.id }]"
       >

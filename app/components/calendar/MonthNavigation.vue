@@ -1,7 +1,7 @@
 <template>
   <div class="month-navigation-wrapper">
     <div class="month-navigation">
-      <button @click="$emit('previous')" class="nav-btn">
+      <button @click="$emit('previous')" class="nav-btn" :disabled="!canGoPrevious">
         ← Предыдущий
       </button>
       <h2 class="current-month">{{ monthName }} {{ year }}</h2>
@@ -17,9 +17,12 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue';
+
+const props = defineProps<{
   monthName: string;
   year: number;
+  month: number;
 }>();
 
 defineEmits<{
@@ -27,6 +30,24 @@ defineEmits<{
   next: [];
   today: [];
 }>();
+
+// Проверка возможности перехода назад
+const canGoPrevious = computed(() => {
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1; // 1-12
+  
+  // Нельзя идти назад, если выбранный месяц раньше или равен текущему
+  if (props.year < currentYear) {
+    return false;
+  }
+  
+  if (props.year === currentYear && props.month <= currentMonth) {
+    return false;
+  }
+  
+  return true;
+});
 </script>
 
 <style scoped lang="scss">
@@ -48,10 +69,15 @@ defineEmits<{
       transition: all 0.2s ease;
       font-size: 0.95rem;
 
-      &:hover {
+      &:hover:not(:disabled) {
         border-color: #0ea5e9;
         color: #0ea5e9;
         background: #f0f9ff;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
       }
     }
 
