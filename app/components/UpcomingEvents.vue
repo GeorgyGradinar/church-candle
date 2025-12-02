@@ -41,7 +41,7 @@ const upcomingEvents = computed(() => {
   const today = new Date();
   const currentMonth = today.getMonth() + 1;
   const currentDay = today.getDate();
-  
+
   // Фильтруем события, которые еще не прошли в этом месяце
   const futureEvents = orthodoxCalendar.filter(event => {
     if (event.month === currentMonth) {
@@ -52,7 +52,7 @@ const upcomingEvents = computed(() => {
     }
     return false;
   });
-  
+
   // Сортируем по дате
   return futureEvents
     .sort((a, b) => {
@@ -138,6 +138,7 @@ function getEventTypeName(type: string): string {
   background: #f0f9ff;
   border-radius: 12px;
   min-width: 60px;
+  height: min-content;
 }
 
 .date-day {
