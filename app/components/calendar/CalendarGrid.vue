@@ -49,19 +49,38 @@ function isSelectedDate(day: any): boolean {
   grid-template-columns: repeat(7, 1fr);
   gap: 0.5rem;
   margin-top: 1rem;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 
   .calendar-day-header {
     text-align: center;
     font-weight: 600;
     color: #64748b;
-    padding: 0.75rem;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .calendar-grid {
+    gap: 0.4rem;
+    
+    .calendar-day-header {
+      padding: 0.4rem 0.2rem;
+      font-size: 0.8rem;
+    }
   }
 }
 
 @media (max-width: 768px) {
   .calendar-grid {
-    gap: 0.35rem;
+    gap: 0.3rem;
+    
+    .calendar-day-header {
+      padding: 0.3rem 0.1rem;
+      font-size: 0.75rem;
+    }
   }
 }
 </style>

@@ -187,7 +187,9 @@ const calendarDays = computed(() => {
   const firstDay = new Date(year, month - 1, 1);
   const lastDay = new Date(year, month, 0);
   const daysInMonth = lastDay.getDate();
-  const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+  // Преобразуем getDay() для недели, начинающейся с понедельника
+  // 0 (Вс) -> 6, 1 (Пн) -> 0, 2 (Вт) -> 1, и т.д.
+  const startDayOfWeek = (firstDay.getDay() + 6) % 7;
   
   const days: any[] = [];
   
@@ -327,6 +329,9 @@ function lightCandle(event: any) {
   max-width: 1200px;
   margin: 0 auto;
   padding: 3rem 1.5rem 4rem;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .page-header {
@@ -385,9 +390,15 @@ function lightCandle(event: any) {
   }
 }
 
+@media (max-width: 1024px) {
+  .page-shell {
+    padding: 2.5rem 1rem 3.5rem;
+  }
+}
+
 @media (max-width: 768px) {
   .page-shell {
-    padding: 2rem 1rem 3rem;
+    padding: 2rem 0.75rem 3rem;
   }
 
   .page-header {
@@ -399,6 +410,18 @@ function lightCandle(event: any) {
   .view-switcher .view-btn {
     font-size: 0.9rem;
     padding: 0.65rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-shell {
+    padding: 1.5rem 0.5rem 2.5rem;
+  }
+
+  .page-header {
+    h1 {
+      font-size: 1.5rem;
+    }
   }
 }
 </style>
