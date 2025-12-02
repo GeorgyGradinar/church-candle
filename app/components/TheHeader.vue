@@ -33,6 +33,7 @@ const closeMenu = () => {
       <NuxtLink to="/living" @click="closeMenu">За здравие</NuxtLink>
       <NuxtLink to="/repose" @click="closeMenu">За упокой</NuxtLink>
       <NuxtLink to="/prayers" @click="closeMenu">Молитвы</NuxtLink>
+      <NuxtLink to="/calendar" @click="closeMenu">Календарь</NuxtLink>
     </nav>
 
     <NuxtLink to="/login" class="login-btn" v-if="!user">Войти</NuxtLink>
