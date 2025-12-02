@@ -43,14 +43,16 @@ defineEmits<{
 .calendar-day {
   aspect-ratio: 1;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.5rem;
+  border-radius: 8px;
+  padding: 0.4rem;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
   background: #fff;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 
   &:hover {
     border-color: #0ea5e9;
@@ -85,9 +87,10 @@ defineEmits<{
 
   .day-number {
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     color: #0f172a;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
+    line-height: 1;
   }
 
   .day-events {
@@ -146,12 +149,28 @@ defineEmits<{
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .calendar-day {
-    padding: 0.35rem;
+    padding: 0.3rem;
+    border-radius: 6px;
 
     .day-number {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+    }
+
+    .day-events .event-dot .event-title-short {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .calendar-day {
+    padding: 0.25rem;
+    border-radius: 4px;
+
+    .day-number {
+      font-size: 0.75rem;
     }
 
     .day-events {
@@ -164,14 +183,6 @@ defineEmits<{
           display: none;
         }
       }
-    }
-  }
-}
-
-@media (max-width: 1024px) {
-  .calendar-day {
-    .day-events .event-dot .event-title-short {
-      display: none;
     }
   }
 }
