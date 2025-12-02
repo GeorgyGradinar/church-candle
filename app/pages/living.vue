@@ -9,41 +9,16 @@
     </header>
 
     <div class="icons-grid">
-      <article
-        v-for="(icon, index) in iconBlocks"
-        :key="icon.id"
-        class="icon-card"
-      >
-        <div class="icon-visual" aria-hidden="true">
-          <span>Икона</span>
-        </div>
-        <h3>{{ icon.title }}</h3>
-        <p>Сейчас горит {{ icon.candles }} свеч{{ icon.candlesWord }}</p>
-        <button type="button" @click="openForm(index)">
-          Поставить свечу
-        </button>
-
-        <div v-if="icon.showForm" class="candle-form">
-          <label>
-            Имя молящегося
-            <input
-              v-model="icon.name"
-              :disabled="icon.anonymous"
-              :class="{ disabled: icon.anonymous }"
-              type="text"
-              placeholder="Например: раба Божия Анна"
-            >
-          </label>
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              :checked="icon.anonymous"
-              @change="toggleAnonymous(index)"
-            >
-            <span>Оставить анонимно</span>
-          </label>
-        </div>
-      </article>
+      <IconCard
+        v-for="(icon, index) in iconsLiving"
+        :key="icon.documentId || icon.id"
+        :icon="icon"
+        :base-url="baseUrl"
+        :candles-count="getCandlesCount(index)"
+        name-label="Имя молящегося"
+        placeholder="Например: раба Божия Анна"
+        theme="living"
+      />
     </div>
 
     <form class="form-card" @submit.prevent>
@@ -75,222 +50,235 @@
   </section>
 </template>
 
-<script setup lang="ts">
-import { ref } from "vue";
+<script setup>
+import { onMounted } from "vue";
+import { storeToRefs } from "pinia";
+import iconsRequests from "~/mixins/requests/icons";
+import candlesRequests from "~/mixins/requests/candles";
+import { useLivingIconsStore } from "~/stores/livingIconsStore.js";
+import { useAuthStore } from "~/stores/mainStore.js";
+import IconCard from "~/components/IconCard.vue";
 
-type IconBlock = {
-  id: number;
-  title: string;
-  candles: number;
-  candlesWord: string;
-  showForm: boolean;
-  name: string;
-  anonymous: boolean;
-};
+const iconsStore = useLivingIconsStore();
+const { iconsLiving } = storeToRefs(iconsStore);
+const { getAllIcons } = iconsRequests();
+const { getAllCandles } = candlesRequests();
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
 
-const iconBlocks = ref<IconBlock[]>(
-  Array.from({ length: 5 }, (_, idx) => {
-    const candles = 5 + idx * 3;
-    const candlesWord =
-      candles === 1 ? "а" : candles >= 2 && candles <= 4 ? "и" : "ей";
-    return {
-      id: idx,
-      title: `Икона №${idx + 1}`,
-      candles,
-      candlesWord,
-      showForm: false,
-      name: "",
-      anonymous: false,
-    };
-  }),
-);
+const baseUrl = 'https://strapi.botinex.ru';
 
-const openForm = (index: number) => {
-  const item = iconBlocks.value[index];
-  if (!item) return;
-  item.showForm = true;
-};
+function getCandlesCount(index) {
+  return 3 + index * 2;
+}
 
-const toggleAnonymous = (index: number) => {
-  const item = iconBlocks.value[index];
-  if (!item) return;
-  item.anonymous = !item.anonymous;
-  if (item.anonymous) item.name = "";
-};
+onMounted(() => {
+  // Запрашиваем иконы только если их нет в сторе
+  if (!iconsLiving.value) {
+    getAllIcons(true);
+  }
+
+  // Загружаем свечи из localStorage для незалогиненных пользователей
+  iconsStore.loadCandlesFromStorage();
+
+  // Запрашиваем свечи только если пользователь залогинен
+  if (user.value && user.value.accessToken) {
+    getAllCandles()
+      .then(response => {
+        console.log('Candles loaded:', response);
+      })
+      .catch(error => {
+        console.error('Error loading candles:', error);
+      });
+  }
+});
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .page-shell {
-  max-width: 640px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
-}
+  padding: 2rem 1rem 4rem;
 
-header {
-  margin-bottom: 2rem;
-}
+  @media (min-width: 768px) {
+    padding: 3rem 2rem 5rem;
+  }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
-  font-size: 0.8rem;
-  margin-bottom: 0.75rem;
-}
+  @media (min-width: 1024px) {
+    padding: 4rem 2rem 6rem;
+  }
 
-h1 {
-  margin-bottom: 0.5rem;
-  color: #0f172a;
-}
+  header {
+    margin-bottom: 3rem;
+    text-align: center;
 
-header p {
-  color: #475569;
-  line-height: 1.5;
-}
+    @media (min-width: 768px) {
+      margin-bottom: 4rem;
+      text-align: left;
+      max-width: 800px;
+    }
 
-.icons-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2.5rem;
-}
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #8b7355;
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
+      font-weight: 500;
 
-.icon-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 1.5rem;
-  background-color: #fff;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
+      @media (min-width: 768px) {
+        font-size: 0.8rem;
+      }
+    }
 
-.icon-visual {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 16px;
-  border: 1px dashed #cbd5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  font-size: 0.95rem;
-  background: linear-gradient(145deg, #f8fafc, #ffffff);
-}
+    h1 {
+      margin-bottom: 1rem;
+      color: #2c2416;
+      font-size: 2rem;
+      font-weight: 400;
+      line-height: 1.2;
 
-.icon-card h3 {
-  color: #0f172a;
-  font-size: 1.15rem;
-}
+      @media (min-width: 768px) {
+        font-size: 2.5rem;
+      }
 
-.icon-card p {
-  color: #475569;
-}
+      @media (min-width: 1024px) {
+        font-size: 3rem;
+      }
+    }
 
-.icon-card button {
-  margin-top: auto;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  border: none;
-  background: #0ea5e9;
-  color: #fff;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
+    p {
+      color: #5a4a3a;
+      line-height: 1.7;
+      font-size: 0.95rem;
 
-.icon-card button:hover {
-  background: #0284c7;
-}
+      @media (min-width: 768px) {
+        font-size: 1rem;
+        max-width: 600px;
+      }
+    }
+  }
 
-.candle-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  text-align: left;
-}
+  .icons-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
 
-.candle-form label {
-  font-size: 0.9rem;
-  color: #0f172a;
-}
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
 
-.candle-form input[type="text"] {
-  width: 100%;
-  border: 1px solid #cbd5f5;
-  border-radius: 10px;
-  padding: 0.65rem 0.85rem;
-  font-size: 0.95rem;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2.5rem;
+      margin-bottom: 4rem;
+    }
+  }
 
-.candle-form input.disabled {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  color: #94a3b8;
-}
+  .form-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid #e8e0d4;
+    background: linear-gradient(to bottom, #fefcf9, #faf8f4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 
-.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #475569;
-}
+    @media (min-width: 768px) {
+      padding: 2.5rem;
+      border-radius: 20px;
+      gap: 2rem;
+    }
 
-.form-card {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 2rem;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  background-color: #fff;
-}
+    @media (min-width: 1024px) {
+      padding: 3rem;
+    }
 
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.95rem;
-  color: #0f172a;
-}
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      color: #3d3325;
+      font-weight: 500;
 
-textarea,
-select,
-input {
-  border: 1px solid #cbd5f5;
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  font-size: 1rem;
-  font-family: inherit;
-}
+      @media (min-width: 768px) {
+        font-size: 1rem;
+      }
+    }
 
-textarea {
-  resize: vertical;
-}
+    textarea,
+    select,
+    input {
+      border: 1.5px solid #d4c9b8;
+      border-radius: 10px;
+      padding: 0.875rem 1.15rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fff;
+      color: #2c2416;
+      transition: all 0.2s ease;
 
-button {
-  padding: 0.95rem 1rem;
-  border-radius: 999px;
-  border: none;
-  background: #10b981;
-  color: #fff;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
+      @media (min-width: 768px) {
+        padding: 1rem 1.25rem;
+        font-size: 1rem;
+      }
 
-button:hover {
-  background: #059669;
-}
+      &:focus {
+        outline: none;
+        border-color: #b8a082;
+        box-shadow: 0 0 0 3px rgba(184, 160, 130, 0.1);
+      }
+    }
 
-.hint {
-  text-align: center;
-  font-size: 0.9rem;
-  color: #475569;
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    button {
+      padding: 1rem 2rem;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #6b8e5a, #5a7a4a);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(90, 122, 74, 0.2);
+
+      @media (min-width: 768px) {
+        padding: 1.125rem 2.5rem;
+        font-size: 1.05rem;
+      }
+
+      &:hover {
+        background: linear-gradient(135deg, #5a7a4a, #4a6a3a);
+        box-shadow: 0 4px 8px rgba(90, 122, 74, 0.3);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+
+    .hint {
+      text-align: center;
+      font-size: 0.875rem;
+      color: #6b5d47;
+      line-height: 1.6;
+      margin-top: 0.5rem;
+
+      @media (min-width: 768px) {
+        font-size: 0.9rem;
+      }
+    }
+  }
 }
 </style>
 

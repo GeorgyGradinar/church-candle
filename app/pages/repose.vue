@@ -10,46 +10,16 @@
     </header>
 
     <div class="icons-grid">
-      <article
-        v-for="(icon, index) in iconBlocks"
+      <IconCard
+        v-for="(icon, index) in iconsRepose"
         :key="icon.documentId || icon.id"
-        class="icon-card"
-      >
-        <div class="icon-visual" aria-hidden="true">
-          <img
-            v-if="icon.image && icon.image.length > 0 && icon.image[0]"
-            :src="`${baseUrl}${icon.image[0].url}`"
-            :alt="icon.title"
-          >
-          <span v-else>Икона</span>
-        </div>
-        <h3>{{ icon.title }}</h3>
-        <p>Сейчас горит {{ icon.candles }} свеч{{ icon.candlesWord }}</p>
-
-        <div class="candle-form">
-          <label>
-            Имя усопшего
-            <input
-              v-model="icon.name"
-              :disabled="icon.anonymous"
-              :class="{ disabled: icon.anonymous }"
-              type="text"
-              placeholder="Например: раба Божия Мария"
-            >
-          </label>
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              :checked="icon.anonymous"
-              @change="toggleAnonymous(index)"
-            >
-            <span>Оставить анонимно</span>
-          </label>
-          <button type="button" @click="() => submitCandle(index)" class="submit-candle-btn">
-            Установить свечу
-          </button>
-        </div>
-      </article>
+        :icon="icon"
+        :base-url="baseUrl"
+        :candles-count="getCandlesCount(index)"
+        name-label="Имя усопшего"
+        placeholder="Например: раба Божия Мария"
+        theme="repose"
+      />
     </div>
 
     <form class="form-card" @submit.prevent>
@@ -78,310 +48,226 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import iconsRequests from "~/mixins/requests/icons";
 import candlesRequests from "~/mixins/requests/candles";
-import { useIconsStore } from "~/stores/iconsStore.js";
+import { useReposeIconsStore } from "~/stores/reposeIconsStore.js";
+import { useAuthStore } from "~/stores/mainStore.js";
+import IconCard from "~/components/IconCard.vue";
 
+const iconsStore = useReposeIconsStore();
+const { iconsRepose } = storeToRefs(iconsStore);
 const { getAllIcons } = iconsRequests();
-const { getAllCandles, createCandle } = candlesRequests();
-const iconsStore = useIconsStore();
-const { icons } = storeToRefs(iconsStore);
+const { getAllCandles } = candlesRequests();
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
 
 const baseUrl = 'https://strapi.botinex.ru';
 
-const iconBlocks = ref([]);
-
-function updateIconBlocks() {
-  if (!icons.value || icons.value.length === 0) {
-    iconBlocks.value = [];
-    return;
-  }
-
-  iconBlocks.value = icons.value.map((icon, idx) => {
-    const candles = 3 + idx * 2;
-    const candlesWord =
-      candles === 1 ? "а" : candles >= 2 && candles <= 4 ? "и" : "ей";
-    
-    return {
-      id: icon.id,
-      documentId: icon.documentId,
-      title: icon.title,
-      description: icon.description,
-      prayer: icon.prayer,
-      image: icon.image || [],
-      candles,
-      candlesWord,
-      showForm: false,
-      name: "",
-      anonymous: false,
-      type: "medium",
-    };
-  });
-}
-
-watch(icons, () => {
-  updateIconBlocks();
-}, { immediate: true });
-
-const toggleAnonymous = (index) => {
-  const item = iconBlocks.value[index];
-  if (!item) return;
-  item.anonymous = !item.anonymous;
-  if (item.anonymous) item.name = "";
-};
-
-async function submitCandle(index) {
-  const item = iconBlocks.value[index];
-  if (!item) return;
-
-  if (!item.anonymous && !item.name) {
-    alert('Пожалуйста, введите имя или выберите анонимно');
-    return;
-  }
-
-  try {
-    const requestBody = {
-      iconId: item.id,
-      type: item.type || 'medium',
-    };
-
-    // Отправляем имя только если не анонимно
-    if (!item.anonymous && item.name) {
-      requestBody.name = item.name;
-    }
-
-    const response = await createCandle(requestBody);
-
-    if (response) {
-      alert('Свеча успешно установлена');
-      item.name = '';
-      item.anonymous = false;
-    }
-  } catch (error) {
-    console.error('Error creating candle:', error);
-    alert('Ошибка при установке свечи');
-  }
+function getCandlesCount(index) {
+  return 3 + index * 2;
 }
 
 onMounted(() => {
-  getAllIcons({ locale: 'ru', page: 1, pageSize: 10 })
-    .then(response => {
-      console.log('Icons loaded:', response);
-      updateIconBlocks();
-    })
-    .catch(error => {
-      console.error('Error loading icons:', error);
-    });
+  // Запрашиваем иконы только если их нет в сторе
+  if (!iconsRepose.value) {
+    getAllIcons(false);
+  }
 
-  getAllCandles()
-    .then(response => {
-      console.log('Candles loaded:', response);
-    })
-    .catch(error => {
-      console.error('Error loading candles:', error);
-    });
+  // Загружаем свечи из localStorage для незалогиненных пользователей
+  iconsStore.loadCandlesFromStorage();
+
+  // Запрашиваем свечи только если пользователь залогинен
+  if (user.value && user.value.accessToken) {
+    getAllCandles();
+  }
 });
 </script>
 
 <style scoped lang="scss">
 .page-shell {
-  max-width: 640px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 3rem 1.5rem 4rem;
+  padding: 2rem 1rem 4rem;
+
+  @media (min-width: 768px) {
+    padding: 3rem 2rem 5rem;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 4rem 2rem 6rem;
+  }
 
   header {
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
+    text-align: center;
+
+    @media (min-width: 768px) {
+      margin-bottom: 4rem;
+      text-align: left;
+      max-width: 800px;
+    }
 
     .eyebrow {
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #64748b;
-      font-size: 0.8rem;
-      margin-bottom: 0.75rem;
+      letter-spacing: 0.12em;
+      color: #7a6b5a;
+      font-size: 0.75rem;
+      margin-bottom: 1rem;
+      font-weight: 500;
+
+      @media (min-width: 768px) {
+        font-size: 0.8rem;
+      }
     }
 
     h1 {
-      margin-bottom: 0.5rem;
-      color: #0f172a;
+      margin-bottom: 1rem;
+      color: #2a241c;
+      font-size: 2rem;
+      font-weight: 400;
+      line-height: 1.2;
+
+      @media (min-width: 768px) {
+        font-size: 2.5rem;
+      }
+
+      @media (min-width: 1024px) {
+        font-size: 3rem;
+      }
     }
 
     p {
-      color: #475569;
-      line-height: 1.5;
+      color: #5a4f45;
+      line-height: 1.7;
+      font-size: 0.95rem;
+
+      @media (min-width: 768px) {
+        font-size: 1rem;
+        max-width: 600px;
+      }
     }
   }
 
   .icons-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 2.5rem;
-  }
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
 
-  .icon-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 1.5rem;
-    background-color: #fff;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-
-    .icon-visual {
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 16px;
-      border: 1px dashed #cbd5f5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #94a3b8;
-      font-size: 0.95rem;
-      background: linear-gradient(145deg, #f8fafc, #ffffff);
-      overflow: hidden;
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 16px;
-      }
-
-      span {
-        padding: 1rem;
-      }
+    @media (min-width: 640px) {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
     }
 
-    h3 {
-      color: #0f172a;
-      font-size: 1.15rem;
-    }
-
-    p {
-      color: #475569;
-    }
-
-    button {
-      margin-top: auto;
-      padding: 0.75rem 1rem;
-      border-radius: 12px;
-      border: none;
-      background: #ef4444;
-      color: #fff;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: background 0.2s ease;
-
-      &:hover {
-        background: #dc2626;
-      }
-    }
-
-    .candle-form {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-top: 1rem;
-      text-align: left;
-
-      label {
-        font-size: 0.9rem;
-        color: #0f172a;
-      }
-
-      input[type="text"] {
-        border: 1px solid #cbd5f5;
-        border-radius: 10px;
-        padding: 0.65rem 0.85rem;
-        font-size: 0.95rem;
-        transition: background 0.2s ease, border-color 0.2s ease;
-
-        &.disabled {
-          background: #f1f5f9;
-          border-color: #e2e8f0;
-          color: #94a3b8;
-        }
-      }
-
-      .checkbox {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-        color: #475569;
-      }
-
-      .submit-candle-btn {
-        margin-top: 0.5rem;
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        border: none;
-        background: #ef4444;
-        color: #fff;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: background 0.2s ease;
-
-        &:hover {
-          background: #dc2626;
-        }
-      }
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2.5rem;
+      margin-bottom: 4rem;
     }
   }
 
   .form-card {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
     padding: 2rem;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
-    background-color: #fff;
+    border-radius: 16px;
+    border: 1px solid #d8d0c4;
+    background: linear-gradient(to bottom, #f8f6f2, #f3f0eb);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+    @media (min-width: 768px) {
+      padding: 2.5rem;
+      border-radius: 20px;
+      gap: 2rem;
+    }
+
+    @media (min-width: 1024px) {
+      padding: 3rem;
+    }
 
     label {
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
+      gap: 0.5rem;
       font-size: 0.95rem;
-      color: #0f172a;
+      color: #3a3228;
+      font-weight: 500;
+
+      @media (min-width: 768px) {
+        font-size: 1rem;
+      }
     }
 
     textarea,
     select,
     input {
-      border: 1px solid #cbd5f5;
-      border-radius: 12px;
-      padding: 0.85rem 1rem;
-      font-size: 1rem;
+      border: 1.5px solid #c8beb0;
+      border-radius: 10px;
+      padding: 0.875rem 1.15rem;
+      font-size: 0.95rem;
       font-family: inherit;
+      background: #fff;
+      color: #2a241c;
+      transition: all 0.2s ease;
+
+      @media (min-width: 768px) {
+        padding: 1rem 1.25rem;
+        font-size: 1rem;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #a89682;
+        box-shadow: 0 0 0 3px rgba(168, 150, 130, 0.1);
+      }
     }
 
     textarea {
       resize: vertical;
+      min-height: 100px;
     }
 
     button {
-      padding: 0.95rem 1rem;
-      border-radius: 999px;
+      padding: 1rem 2rem;
+      border-radius: 10px;
       border: none;
-      background: #dc2626;
+      background: linear-gradient(135deg, #7a5f4a, #6a4f3a);
       color: #fff;
       font-size: 1rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: background 0.2s ease;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(106, 79, 58, 0.2);
+
+      @media (min-width: 768px) {
+        padding: 1.125rem 2.5rem;
+        font-size: 1.05rem;
+      }
 
       &:hover {
-        background: #b91c1c;
+        background: linear-gradient(135deg, #6a4f3a, #5a3f2a);
+        box-shadow: 0 4px 8px rgba(106, 79, 58, 0.3);
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
       }
     }
 
     .hint {
       text-align: center;
-      font-size: 0.9rem;
-      color: #475569;
+      font-size: 0.875rem;
+      color: #6b5f52;
+      line-height: 1.6;
+      margin-top: 0.5rem;
+
+      @media (min-width: 768px) {
+        font-size: 0.9rem;
+      }
     }
   }
 }

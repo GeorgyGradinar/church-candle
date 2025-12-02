@@ -11,7 +11,7 @@ export default function candlesRequests() {
         return response;
       })
       .catch(error => {
-        handle401Error(error);
+        // handle401Error(error);
         return error;
       })
   }
@@ -25,7 +25,7 @@ export default function candlesRequests() {
         return response;
       })
       .catch(error => {
-        handle401Error(error);
+        // handle401Error(error);
         return error;
       })
   }

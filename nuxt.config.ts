@@ -2,7 +2,10 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-
+  css: [
+    "~/assets/main.css",
+    'vuetify/lib/styles/main.sass',
+  ],
   runtimeConfig: {
     public: {
       API_URL: process.env.API_URL,
