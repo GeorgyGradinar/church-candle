@@ -203,7 +203,7 @@ const calendarDays = computed(() => {
       year: prevYear,
       isCurrentMonth: false,
       isToday: false,
-      events: filterEvents(getEventsByDate(prevMonth, day))
+      events: filterEvents(getEventsByDate(prevMonth, day, prevYear))
     });
   }
   
@@ -216,7 +216,7 @@ const calendarDays = computed(() => {
       year,
       isCurrentMonth: true,
       isToday,
-      events: filterEvents(getEventsByDate(month, day))
+      events: filterEvents(getEventsByDate(month, day, year))
     });
   }
   
@@ -231,7 +231,7 @@ const calendarDays = computed(() => {
       year: nextYear,
       isCurrentMonth: false,
       isToday: false,
-      events: filterEvents(getEventsByDate(nextMonth, day))
+      events: filterEvents(getEventsByDate(nextMonth, day, nextYear))
     });
   }
   
@@ -239,7 +239,7 @@ const calendarDays = computed(() => {
 });
 
 const filteredListEvents = computed(() => {
-  let events = getEventsByMonth(selectedMonth.value);
+  let events = getEventsByMonth(selectedMonth.value, selectedYear.value);
   
   // Фильтр по категории
   if (selectedCategory.value) {
