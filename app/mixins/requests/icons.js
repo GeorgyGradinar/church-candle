@@ -3,6 +3,7 @@ import getHeaders from "~/mixins/createHeaders.js";
 import { useIconsStore } from "~/stores/iconsStore.js";
 import { handle401Error } from "~/utils/errorHandler.js";
 import { useReposeIconsStore } from "~/stores/reposeIconsStore.js";
+import { useLivingIconsStore } from "~/stores/livingIconsStore.js";
 
 export default function iconsRequests() {
   const header = [HEADER_PARAMETERS.accept, HEADER_PARAMETERS.content, HEADER_PARAMETERS.authorization];

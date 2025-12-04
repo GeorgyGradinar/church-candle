@@ -2,21 +2,26 @@
   <article class="icon-card" :class="`icon-card--${theme}`">
     <div class="icon-visual" aria-hidden="true">
       <img
-        v-if="icon.image && icon.image.length > 0 && icon.image[0]"
+        v-if="icon?.image?.[0]"
         :src="`${baseUrl}${icon.image[0].url}`"
         :alt="icon.title"
       >
       <span v-else>Икона</span>
     </div>
     <h3>{{ icon.title }}</h3>
-    <p>Сейчас горит {{ totalCandlesCount }} свеч{{ candlesWord }}</p>
+    <p>Сейчас горит 12 свеч{{ candlesWord }}</p>
 
-    <div v-if="userCandles.length > 0 && isCandleBurning" class="user-candles">
+    <div v-if="icon?.candle" class="user-candles">
       <div class="user-candles-header">
-        <Candle class="candle-component" />
+        <Candle
+          :candle="icon.candle"
+          :theme="theme"
+          :icon-id="icon.id"
+          class="candle-component"
+        />
         <div class="user-candles-info">
           <span class="user-candles-text">Ваша свеча горит</span>
-          <span v-if="userCandles[0].name" class="candle-name">{{ userCandles[0].name }}</span>
+          <span v-if="icon.candle.name" class="candle-name">{{ icon.candle.name }}</span>
           <span v-else class="candle-name anonymous">Анонимно</span>
         </div>
       </div>
@@ -40,24 +45,24 @@
         >
         <span>Оставить анонимно</span>
       </label>
-      <button 
-        type="button" 
-        @click="handleSubmit" 
+      <button
+        type="button"
+        @click="handleSubmit"
         class="submit-candle-btn"
-        :disabled="isCandleBurning"
-        :class="{ disabled: isCandleBurning }"
+        :disabled="icon.candle"
+        :class="{ disabled: icon.candle }"
       >
-        <span v-if="!isCandleBurning">Установить свечу</span>
-        <span v-else class="timer-text">
-          Свеча горит... {{ remainingTimeText }}
+        <span v-if="icon.candle" class="timer-text">
+          Свеча горит...
         </span>
+        <span v-else>Установить свечу</span>
       </button>
     </div>
   </article>
 </template>
 
 <script setup>
-import { reactive, computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import { storeToRefs } from "pinia";
 import candlesRequests from "~/mixins/requests/candles";
 import { useAuthStore } from "~/stores/mainStore.js";
@@ -101,207 +106,24 @@ const { user } = storeToRefs(authStore);
 
 const livingIconsStore = useLivingIconsStore();
 const reposeIconsStore = useReposeIconsStore();
-const { candlesLiving } = storeToRefs(livingIconsStore);
-const { candlesRepose } = storeToRefs(reposeIconsStore);
+
+onMounted(() => {
+  console.log(props.icon)
+})
 
 const formState = reactive({
   name: "",
   anonymous: false,
 });
 
-// Вычисляем общее количество свечей: базовое + из localStorage
-const totalCandlesCount = computed(() => {
-  const baseCount = props.candlesCount;
-  let localStorageCount = 0;
-  
-  if (props.theme === 'living') {
-    localStorageCount = livingIconsStore.getCandlesCountByIconId(props.icon.id);
-  } else {
-    localStorageCount = reposeIconsStore.getCandlesCountByIconId(props.icon.id);
-  }
-  
-  return baseCount + localStorageCount;
-});
-
-const candlesWord = computed(() => {
-  const count = totalCandlesCount.value;
-  if (count === 1) return "а";
-  if (count >= 2 && count <= 4) return "и";
-  return "ей";
-});
-
-// Получаем свечи пользователя для этой иконы (только одну - самую свежую)
-const userCandles = computed(() => {
-  let candles = [];
-  
-  if (props.theme === 'living') {
-    candles = livingIconsStore.candlesLiving.filter(
-      candle => candle.iconId === props.icon.id
-    );
-  } else {
-    candles = reposeIconsStore.candlesRepose.filter(
-      candle => candle.iconId === props.icon.id
-    );
-  }
-  
-  // Сортируем по времени и возвращаем только самую свежую (или пустой массив)
-  if (candles.length > 0) {
-    const sorted = candles.sort((a, b) => {
-      const timeA = new Date(a.createdAt || 0).getTime();
-      const timeB = new Date(b.createdAt || 0).getTime();
-      return timeB - timeA;
-    });
-    // Возвращаем только самую свежую свечу
-    return [sorted[0]];
-  }
-  
-  return [];
-});
-
-// Таймер для отслеживания времени горения свечи
-const remainingTime = ref(0);
-const timerInterval = ref(null);
-const CANDLE_BURN_TIME = 60 * 1000; // 1 минута в миллисекундах
-
-// Получаем время последней установленной свечи (самая свежая)
-const lastCandleTime = computed(() => {
-  if (props.theme === 'living') {
-    return livingIconsStore.getLastCandleTimeByIconId(props.icon.id);
-  } else {
-    return reposeIconsStore.getLastCandleTimeByIconId(props.icon.id);
-  }
-});
-
-// Проверяем, есть ли хотя бы одна горящая свеча
-const isCandleBurning = computed(() => {
-  const candles = userCandles.value;
-  if (candles.length === 0) return false;
-  
-  const now = Date.now();
-  // Проверяем все свечи - если хотя бы одна еще горит, блокируем
-  return candles.some(candle => {
-    if (!candle.createdAt) return false;
-    const candleTime = new Date(candle.createdAt).getTime();
-    const elapsed = now - candleTime;
-    return elapsed < CANDLE_BURN_TIME;
-  });
-});
-
-// Вычисляем оставшееся время для самой свежей свечи
-const remainingTimeText = computed(() => {
-  if (!lastCandleTime.value) return '';
-  const elapsed = Date.now() - lastCandleTime.value;
-  const remaining = Math.max(0, CANDLE_BURN_TIME - elapsed);
-  const seconds = Math.ceil(remaining / 1000);
-  return `${seconds} сек`;
-});
-
-// Обновляем таймер
-const updateTimer = () => {
-  const candles = userCandles.value;
-  
-  if (candles.length === 0 || !lastCandleTime.value) {
-    remainingTime.value = 0;
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value);
-      timerInterval.value = null;
-    }
-    return;
-  }
-  
-  const elapsed = Date.now() - lastCandleTime.value;
-  remainingTime.value = Math.max(0, CANDLE_BURN_TIME - elapsed);
-  
-  // Если свеча догорела, удаляем её
-  if (remainingTime.value <= 0) {
-    if (props.theme === 'living') {
-      livingIconsStore.removeCandlesByIconId(props.icon.id);
-    } else {
-      reposeIconsStore.removeCandlesByIconId(props.icon.id);
-    }
-    
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value);
-      timerInterval.value = null;
-    }
-  }
-};
-
-// Запускаем таймер
-watch([lastCandleTime, isCandleBurning], () => {
-  if (isCandleBurning.value) {
-    updateTimer();
-    if (!timerInterval.value) {
-      timerInterval.value = setInterval(updateTimer, 1000);
-    }
-  } else {
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value);
-      timerInterval.value = null;
-    }
-  }
-}, { immediate: true });
-
-onMounted(() => {
-  // Очищаем догоревшие свечи при загрузке
-  const candles = userCandles.value;
-  if (candles.length > 0) {
-    const now = Date.now();
-    const hasActiveCandles = candles.some(candle => {
-      if (!candle.createdAt) return false;
-      const candleTime = new Date(candle.createdAt).getTime();
-      const elapsed = now - candleTime;
-      return elapsed < CANDLE_BURN_TIME;
-    });
-    
-    // Если нет активных свечей, удаляем все
-    if (!hasActiveCandles) {
-      if (props.theme === 'living') {
-        livingIconsStore.removeCandlesByIconId(props.icon.id);
-      } else {
-        reposeIconsStore.removeCandlesByIconId(props.icon.id);
-      }
-    }
-  }
-  
-  if (isCandleBurning.value) {
-    updateTimer();
-    timerInterval.value = setInterval(updateTimer, 1000);
-  }
-});
-
-onUnmounted(() => {
-  if (timerInterval.value) {
-    clearInterval(timerInterval.value);
-  }
-});
-
 const handleSubmit = async () => {
-  // Проверяем, не горит ли уже свеча
-  if (isCandleBurning.value) {
-    alert(`Пожалуйста, подождите. Свеча еще горит. Осталось: ${remainingTimeText.value}`);
+  if (props.icon.candle) {
+    console.log(`Пожалуйста, подождите. Свеча еще горит`);
     return;
   }
 
-  // Проверяем, есть ли уже свеча для этой иконы
-  // Можно поставить только одну свечу на одну икону
-  if (userCandles.value.length > 0) {
-    // Проверяем, есть ли активные (горящие) свечи
-    const now = Date.now();
-    const activeCandles = userCandles.value.filter(candle => {
-      if (!candle.createdAt) return false;
-      const candleTime = new Date(candle.createdAt).getTime();
-      const elapsed = now - candleTime;
-      return elapsed < CANDLE_BURN_TIME;
-    });
-    
-    // Если есть активные свечи - блокируем
-    if (activeCandles.length > 0) {
-      alert(`Пожалуйста, подождите. Свеча еще горит. Осталось: ${remainingTimeText.value}`);
-      return;
-    }
-    
-    // Если свеча догорела, удаляем её и позволяем поставить новую (только одну)
+  // Если есть старая свеча (но догорела), удаляем её
+  if (props.icon?.candle) {
     if (props.theme === 'living') {
       livingIconsStore.removeCandlesByIconId(props.icon.id);
     } else {
@@ -310,7 +132,7 @@ const handleSubmit = async () => {
   }
 
   if (!formState.anonymous && !formState.name) {
-    alert('Пожалуйста, введите имя или выберите анонимно');
+    console.log('Пожалуйста, введите имя или выберите анонимно');
     return;
   }
 
@@ -342,21 +164,15 @@ const handleSubmit = async () => {
         } else {
           reposeIconsStore.addCandle(candleWithTime);
         }
-        
-        alert('Свеча успешно установлена');
+
+        console.log('Свеча успешно установлена');
         formState.name = '';
         formState.anonymous = false;
         emit('candle-submitted', props.icon.id);
-        
-        // Запускаем таймер
-        updateTimer();
-        if (!timerInterval.value) {
-          timerInterval.value = setInterval(updateTimer, 1000);
-        }
       }
     } catch (error) {
       console.error('Error creating candle:', error);
-      alert('Ошибка при установке свечи');
+      console.log('Ошибка при установке свечи');
     }
   } else {
     // Если не залогинен - сохраняем в localStorage и стор
@@ -365,17 +181,11 @@ const handleSubmit = async () => {
     } else {
       reposeIconsStore.addCandle(candleData);
     }
-    
-    alert('Свеча успешно установлена');
+
+    console.log('Свеча успешно установлена');
     formState.name = '';
     formState.anonymous = false;
     emit('candle-submitted', props.icon.id);
-    
-    // Запускаем таймер
-    updateTimer();
-    if (!timerInterval.value) {
-      timerInterval.value = setInterval(updateTimer, 1000);
-    }
   }
 };
 </script>
@@ -735,41 +545,41 @@ const handleSubmit = async () => {
       }
     }
 
-      .submit-candle-btn {
-        margin-top: 0.25rem;
-        padding: 0.875rem 1.5rem;
-        border-radius: 8px;
-        border: none;
-        color: #fff;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .submit-candle-btn {
+      margin-top: 0.25rem;
+      padding: 0.875rem 1.5rem;
+      border-radius: 8px;
+      border: none;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
 
-        @media (min-width: 768px) {
-          padding: 1rem 1.75rem;
-          font-size: 0.95rem;
-        }
-
-        &:hover:not(:disabled) {
-          transform: translateY(-1px);
-        }
-
-        &:active:not(:disabled) {
-          transform: translateY(0);
-        }
-
-        &:disabled {
-          cursor: not-allowed;
-          opacity: 0.7;
-        }
-
-        .timer-text {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-        }
+      @media (min-width: 768px) {
+        padding: 1rem 1.75rem;
+        font-size: 0.95rem;
       }
+
+      &:hover:not(:disabled) {
+        transform: translateY(-1px);
+      }
+
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+
+      .timer-text {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+    }
   }
 }
 </style>
