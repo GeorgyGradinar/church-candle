@@ -21,7 +21,21 @@ const props = defineProps({
 const livingIconsStore = useLivingIconsStore();
 const reposeIconsStore = useReposeIconsStore();
 
-let waxHeight = ref(307);
+const maxHeightFlame = -380;
+const minHeightFlame = -100;
+
+const maxTopWax = -360;
+const minTopWax = -90;
+const maxHeightWax = 307;
+const minHeightWax = 40;
+
+const maxTopWick = -255;
+const minTopWick = 14;
+
+let currentTopFlame = ref(maxHeightFlame);
+let currentTopWax = ref(maxTopWax);
+let currentHeightWax = ref(maxHeightWax);
+let currentTopWick = ref(maxTopWick);
 
 const remainingSeconds = ref(0);
 const timerInterval = ref(null);
@@ -29,7 +43,6 @@ const CANDLE_BURN_TIME = 60 * 500; // 1 минута в миллисекунда
 
 // Обновляем таймер каждую секунду
 const updateTimer = () => {
-  console.log('test')
   remainingSeconds.value = 0;
 
   const now = Date.now();
@@ -37,6 +50,34 @@ const updateTimer = () => {
   const elapsed = now - candleTime;
   const remaining = Math.max(0, CANDLE_BURN_TIME - elapsed);
   remainingSeconds.value = Math.ceil(remaining / 1000);
+
+  // Вычисляем процент оставшегося времени (100% = maxHeightFlame, 0% = minHeightFlame)
+  const remainingPercent = (remaining / CANDLE_BURN_TIME) * 100;
+
+  // Вычисляем высоту пламени на основе процента оставшегося времени
+  // maxHeightFlame (-380) = 100%, minHeightFlame (-100) = 0%
+  const heightDifferenceFlame = maxHeightFlame - minHeightFlame;
+  const candleHeightFlame = minHeightFlame + (heightDifferenceFlame * (remainingPercent / 100));
+  currentTopFlame.value = candleHeightFlame;
+
+  // Вычисляем top и height воска на основе процента оставшегося времени
+  // maxTopWax (-360) = 100%, minTopWax (-90) = 0%
+  // maxHeightWax (307) = 100%, minHeightWax (40) = 0%
+  const topDifferenceWax = maxTopWax - minTopWax;
+  const heightDifferenceWax = maxHeightWax - minHeightWax;
+  const candleTopWax = minTopWax + (topDifferenceWax * (remainingPercent / 100));
+  const candleHeightWax = minHeightWax + (heightDifferenceWax * (remainingPercent / 100));
+  currentTopWax.value = candleTopWax;
+  currentHeightWax.value = candleHeightWax;
+
+  // Вычисляем top фитиля на основе процента оставшегося времени
+  // maxTopWick (-255) = 100%, minTopWick (14) = 0%
+  const topDifferenceWick = maxTopWick - minTopWick;
+  const candleTopWick = minTopWick + (topDifferenceWick * (remainingPercent / 100));
+  currentTopWick.value = candleTopWick;
+
+  // Выводим в консоль
+  console.log(`Осталось времени: ${ remainingPercent.toFixed(2) }%, Высота пламени: ${ candleHeightFlame.toFixed(2) }px, Top воска: ${ candleTopWax.toFixed(2) }px, Высота воска: ${ candleHeightWax.toFixed(2) }px, Top фитиля: ${ candleTopWick.toFixed(2) }px`);
 
   // Если свеча догорела, удаляем её
   if (remainingSeconds.value <= 0) {
@@ -67,14 +108,14 @@ onUnmounted(() => {
 
 <template>
   <div v-if="candle && candle.createdAt" class="candle">
-    <div class="flame">
+    <div class="flame" :style="{ top: `${currentTopFlame}px` }">
       <div class="shadows"></div>
       <div class="top"></div>
       <div class="middle"></div>
       <div class="bottom"></div>
     </div>
-    <div class="wick"></div>
-    <div class="wax"  :style="{ height: `-${waxHeight}px` }"></div>
+    <div class="wick" :style="{ top: `${currentTopWick}px` }"></div>
+    <div class="wax" :style="{ top: `${currentTopWax}px`, height: `${currentHeightWax}px` }"></div>
   </div>
 </template>
 
@@ -107,7 +148,8 @@ $yellow-grey: #58523a;
   top: -255px;
   left: 50%;
   transform: translateX(-50%) skewX(2deg);
-  animation: decreaseHeightWick 60s linear;
+  transition: top 1s;
+  //animation: decreaseHeightWick 60s linear;
   border-radius: 10%;
   box-shadow: 0 0 2px 0px black;
 
@@ -145,7 +187,9 @@ $yellow-grey: #58523a;
   top: -380px;
   margin: 0px auto;
   position: relative;
-  animation: move 3s infinite, move-left 3s infinite, decreaseHeightFlame 60s linear;
+  animation: move 3s infinite, move-left 3s infinite;
+  transition: top 1s;
+  //animation: move 3s infinite, move-left 3s infinite, decreaseHeightFlame 60s linear;
   transform-origin: 50% 90%;
 
   .top {
@@ -218,7 +262,8 @@ $yellow-grey: #58523a;
   background: -webkit-linear-gradient(top, $orange-yellow 0px, $orange-yellow 20px, $yellow-grey 50px); /* Chrome10-25,Safari5.1-6 */
   background: linear-gradient(to bottom, $orange-yellow 0px, $orange-yellow 20px, $yellow-grey 50px); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
   filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ff9224', endColorstr='#58523a', GradientType=0); /* IE6-9 */
-  animation: decreaseHeight 60s linear;
+  //animation: decreaseHeight 60s linear;
+  transition: top 1s, height 1s;
   border-top-left-radius: 10px;
   border-top-right-radius: 10px;
   box-shadow: inset 0 7px 12px -2px $yellow,
@@ -270,7 +315,7 @@ $yellow-grey: #58523a;
   }
   100% {
     top: -90px;
-    height: 40px; 
+    height: 40px;
   }
 }
 
