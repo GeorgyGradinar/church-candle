@@ -4,28 +4,30 @@
       <h1>Место тихой молитвы</h1>
       <p>Ваш маленький свет в большой молитве</p>
     </div>
-    
+
     <div class="actions-wrapper">
       <ActionCards />
     </div>
-    
+
     <UpcomingEvents :limit="3" />
+    <TextForMainPage />
   </section>
 </template>
 
 <script setup lang="ts">
 import UpcomingEvents from '~/components/UpcomingEvents.vue';
 import ActionCards from '~/components/ActionCards.vue';
+import TextForMainPage from '~/components/index/TextForMainPage.vue';
 
 const config = useRuntimeConfig();
 const siteUrl = config.public.SITE_URL || '';
 
 useHead({
-  title: 'Место тихой молитвы - Дом свечи',
+  title: 'Православные молитвы, свечи и церковный календарь — духовная информация',
   meta: [
     {
       name: 'description',
-      content: 'Ваш маленький свет в большой молитве. Подайте записки о здравии и упокоении, зажгите свечу, узнайте о церковных праздниках и читайте православные молитвы.'
+      content: 'Молитвы за здравие и за упокой, постановка свечи, православный календарь праздников и памятных дней. Спокойный и уважительный духовный ресурс.'
     },
     {
       name: 'keywords',
@@ -34,11 +36,11 @@ useHead({
     // Open Graph
     {
       property: 'og:title',
-      content: 'Место тихой молитвы - Дом свечи'
+      content: 'Православные молитвы, свечи и церковный календарь — духовная информация'
     },
     {
       property: 'og:description',
-      content: 'Ваш маленький свет в большой молитве. Подайте записки, зажгите свечу, узнайте о церковных праздниках.'
+      content: 'Молитвы за здравие и за упокой, постановка свечи, православный календарь праздников и памятных дней. Спокойный и уважительный духовный ресурс.'
     },
     {
       property: 'og:type',
@@ -59,11 +61,11 @@ useHead({
     },
     {
       name: 'twitter:title',
-      content: 'Место тихой молитвы - Дом свечи'
+      content: 'Православные молитвы, свечи и церковный календарь — духовная информация'
     },
     {
       name: 'twitter:description',
-      content: 'Ваш маленький свет в большой молитве. Подайте записки, зажгите свечу, узнайте о церковных праздниках.'
+      content: 'Молитвы за здравие и за упокой, постановка свечи онлайн, православный календарь праздников и памятных дней. Спокойный и уважительный духовный ресурс.'
     }
   ],
   link: [
@@ -78,8 +80,8 @@ useHead({
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        name: 'Дом свечи',
-        description: 'Место тихой молитвы. Подайте записки о здравии и упокоении, зажгите свечу, узнайте о церковных праздниках.',
+        name: 'Слово веры',
+        description: 'Молитвы за здравие и за упокой, постановка свечи онлайн, православный календарь праздников и памятных дней. Спокойный и уважительный духовный ресурс.',
         url: siteUrl,
         inLanguage: 'ru-RU',
         potentialAction: {

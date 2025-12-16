@@ -62,7 +62,7 @@ useHead({
     // Open Graph
     {
       property: 'og:title',
-      content: 'Вход в личный кабинет - Дом свечи'
+      content: 'Вход в личный кабинет - Слово веры'
     },
     {
       property: 'og:description',
@@ -157,13 +157,13 @@ header p {
   padding: 2rem;
   border-radius: 20px;
   border: 1px solid #e2e8f0;
-  background-color: #fff;
+  background-color: #fde68a;
 }
 
 button {
   margin-top: 0.5rem;
   padding: 0.9rem 1rem;
-  border-radius: 999px;
+  border-radius: 10px;
   border: none;
   background: #3b82f6;
   color: #fff;
@@ -187,11 +187,7 @@ button:hover {
 }
 
 .form-error {
-  background: #fee2e2;
   color: #b91c1c;
-  padding: 0.75rem 1rem;
-  border-radius: 10px;
-  margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
 </style>

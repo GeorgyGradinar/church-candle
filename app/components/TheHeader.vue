@@ -1,7 +1,8 @@
-<script setup lang="ts">
+<script setup>
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import {useAuthStore} from "~/stores/mainStore";
+import FAITH_ICON from "../../public/images/svg/faith.svg";
 
 const authStore = useAuthStore();
 const {user} = storeToRefs(authStore);
@@ -20,7 +21,10 @@ const closeMenu = () => {
 <template>
   <header class="site-header">
     <div class="brand">
-      <NuxtLink to="/" @click="closeMenu">Дом свечи</NuxtLink>
+      <NuxtLink to="/" @click="closeMenu" class="brand-link">
+        <FAITH_ICON filled class="brand-icon" />
+        <span>Слово веры</span>
+      </NuxtLink>
     </div>
 
     <button class="burger" type="button" @click="toggleMenu">
@@ -58,6 +62,19 @@ const closeMenu = () => {
   font-size: 1.05rem;
   color: #0f172a;
   text-decoration: none;
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .nav-links {

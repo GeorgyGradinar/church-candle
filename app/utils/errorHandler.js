@@ -9,7 +9,6 @@ export function handle401Error(error) {
   const statusCode = error?.statusCode || error?.status || error?.response?.status || error?.data?.status;
   
   if (statusCode === 401) {
-    const router = useRouter();
     const authStore = useAuthStore();
     const iconsStore = useIconsStore();
     const { removeLocalStorage } = storage();
@@ -20,9 +19,6 @@ export function handle401Error(error) {
 
     // Очищаем localStorage
     removeLocalStorage(CANDLE_USER_KEY);
-
-    // Редирект на главную страницу
-    router.push('/');
   }
 }
 

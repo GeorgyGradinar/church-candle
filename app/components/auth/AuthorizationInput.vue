@@ -70,6 +70,8 @@ onMounted(() => {
       padding: 12px 24px;
       border-radius: 8px;
       transition: all 0.2s;
+      background: #e2e8f0;
+      border: 1px solid #b8a285;
 
       &:focus {
         outline: none;
