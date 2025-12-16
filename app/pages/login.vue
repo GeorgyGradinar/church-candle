@@ -45,6 +45,46 @@ import AuthorizationInput from "~/components/auth/AuthorizationInput.vue";
 import validation from "~/mixins/validation";
 import authRequests from "~/mixins/requests/auth";
 
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+useHead({
+  title: 'Вход в личный кабинет',
+  meta: [
+    {
+      name: 'description',
+      content: 'Войдите в личный кабинет, чтобы сохранять историю записок и пожертвований. Используйте e-mail и пароль, указанные при регистрации.'
+    },
+    {
+      name: 'robots',
+      content: 'noindex, nofollow'
+    },
+    // Open Graph
+    {
+      property: 'og:title',
+      content: 'Вход в личный кабинет - Дом свечи'
+    },
+    {
+      property: 'og:description',
+      content: 'Войдите в личный кабинет, чтобы сохранять историю записок и пожертвований.'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    },
+    {
+      property: 'og:url',
+      content: `${siteUrl}/login`
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `${siteUrl}/login`
+    }
+  ]
+});
+
 const {mapErrors} = validation();
 const {login} = authRequests();
 

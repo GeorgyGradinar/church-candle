@@ -44,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import { watchEffect } from "vue";
 import { HEADER_PARAMETERS, STRAPI_TOKEN } from "~/configs/config.js";
 import getHeaders from "~/mixins/createHeaders.js";
 import Breadcrumbs from "~/components/Breadcrumbs.vue";
@@ -163,6 +164,120 @@ const { data: prayer, pending: loading, error } = await useAsyncData(
     default: () => null
   }
 );
+
+// SEO мета-теги
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+watchEffect(() => {
+  if (prayer.value) {
+    const prayerTitle = prayer.value.title || 'Молитва';
+    const prayerText = prayer.value.text || prayer.value.Text || prayer.value.content || '';
+    const prayerDescription = prayerText.length > 160 
+      ? prayerText.substring(0, 157) + '...' 
+      : prayerText || 'Православная молитва для ежедневного чтения';
+    const prayerUrl = `${siteUrl}/prayers/${prayer.value.slug || slug}`;
+
+    useHead({
+      title: `${prayerTitle} - Православные молитвы`,
+      meta: [
+        {
+          name: 'description',
+          content: prayerDescription
+        },
+        {
+          name: 'keywords',
+          content: `православная молитва, ${prayerTitle}, молитвослов, церковные молитвы, православие`
+        },
+        // Open Graph
+        {
+          property: 'og:title',
+          content: prayerTitle
+        },
+        {
+          property: 'og:description',
+          content: prayerDescription
+        },
+        {
+          property: 'og:type',
+          content: 'article'
+        },
+        {
+          property: 'og:url',
+          content: prayerUrl
+        },
+        {
+          property: 'og:locale',
+          content: 'ru_RU'
+        },
+        // Twitter Card
+        {
+          name: 'twitter:card',
+          content: 'summary'
+        },
+        {
+          name: 'twitter:title',
+          content: prayerTitle
+        },
+        {
+          name: 'twitter:description',
+          content: prayerDescription
+        }
+      ],
+      link: [
+        {
+          rel: 'canonical',
+          href: prayerUrl
+        }
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Article',
+            headline: prayerTitle,
+            description: prayerDescription,
+            url: prayerUrl,
+            inLanguage: 'ru-RU',
+            isPartOf: {
+              '@type': 'WebSite',
+              name: 'Дом свечи',
+              url: siteUrl
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': prayerUrl
+            }
+          })
+        }
+      ]
+    });
+  } else {
+    // SEO по умолчанию, если молитва не загружена
+    useHead({
+      title: 'Молитва - Православные молитвы',
+      meta: [
+        {
+          name: 'description',
+          content: 'Православная молитва для ежедневного чтения и молитвенной жизни.'
+        },
+        {
+          property: 'og:title',
+          content: 'Молитва - Православные молитвы'
+        },
+        {
+          property: 'og:description',
+          content: 'Православная молитва для ежедневного чтения и молитвенной жизни.'
+        },
+        {
+          property: 'og:url',
+          content: `${siteUrl}/prayers/${slug}`
+        }
+      ]
+    });
+  }
+});
 
 function formatPrayerText(text: string): string {
   if (!text) return '';

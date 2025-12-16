@@ -56,6 +56,86 @@ import { useReposeIconsStore } from "~/stores/reposeIconsStore.js";
 import { useAuthStore } from "~/stores/mainStore.js";
 import IconCard from "~/components/IconCard.vue";
 
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+useHead({
+  title: 'Молитвы об усопших - Записки об упокоении',
+  meta: [
+    {
+      name: 'description',
+      content: 'Подайте имена усопших, за которых хотите заказать поминовение. Просим указывать имена в родительном падеже. После оформления с вами свяжется дежурный, чтобы подтвердить детали.'
+    },
+    {
+      name: 'keywords',
+      content: 'молитвы об усопших, записки об упокоении, поминовение усопших, панихида, сорокоуст, литургия об упокоении, церковные записки об усопших'
+    },
+    // Open Graph
+    {
+      property: 'og:title',
+      content: 'Молитвы об усопших - Записки об упокоении'
+    },
+    {
+      property: 'og:description',
+      content: 'Подайте имена усопших, за которых хотите заказать поминовение. Просим указывать имена в родительном падеже.'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    },
+    {
+      property: 'og:url',
+      content: `${siteUrl}/repose`
+    },
+    {
+      property: 'og:locale',
+      content: 'ru_RU'
+    },
+    // Twitter Card
+    {
+      name: 'twitter:card',
+      content: 'summary_large_image'
+    },
+    {
+      name: 'twitter:title',
+      content: 'Молитвы об усопших - Записки об упокоении'
+    },
+    {
+      name: 'twitter:description',
+      content: 'Подайте имена усопших, за которых хотите заказать поминовение. Просим указывать имена в родительном падеже.'
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `${siteUrl}/repose`
+    }
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Молитвы об усопших',
+        description: 'Подайте имена усопших, за которых хотите заказать поминовение. Просим указывать имена в родительном падеже.',
+        url: `${siteUrl}/repose`,
+        inLanguage: 'ru-RU',
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'Дом свечи',
+          url: siteUrl
+        },
+        about: {
+          '@type': 'Thing',
+          name: 'Молитвы об усопших',
+          description: 'Церковные записки и поминовение об упокоении усопших'
+        }
+      })
+    }
+  ]
+});
+
 const iconsStore = useReposeIconsStore();
 const { iconsRepose } = storeToRefs(iconsStore);
 const { getAllIcons } = iconsRequests();

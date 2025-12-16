@@ -78,6 +78,86 @@ import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { HEADER_PARAMETERS, STRAPI_TOKEN } from "~/configs/config.js";
 import getHeaders from "~/mixins/createHeaders.js";
 
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+useHead({
+  title: 'Православные молитвы - Молитвослов',
+  meta: [
+    {
+      name: 'description',
+      content: 'Здесь собраны основные православные молитвы для ежедневного чтения и молитвенной жизни. Найдите нужную молитву и читайте её онлайн.'
+    },
+    {
+      name: 'keywords',
+      content: 'православные молитвы, молитвослов, молитвы на русском, утренние молитвы, вечерние молитвы, молитвы святым, церковные молитвы, православие'
+    },
+    // Open Graph
+    {
+      property: 'og:title',
+      content: 'Православные молитвы - Молитвослов'
+    },
+    {
+      property: 'og:description',
+      content: 'Здесь собраны основные православные молитвы для ежедневного чтения и молитвенной жизни.'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    },
+    {
+      property: 'og:url',
+      content: `${siteUrl}/prayers`
+    },
+    {
+      property: 'og:locale',
+      content: 'ru_RU'
+    },
+    // Twitter Card
+    {
+      name: 'twitter:card',
+      content: 'summary_large_image'
+    },
+    {
+      name: 'twitter:title',
+      content: 'Православные молитвы - Молитвослов'
+    },
+    {
+      name: 'twitter:description',
+      content: 'Здесь собраны основные православные молитвы для ежедневного чтения и молитвенной жизни.'
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `${siteUrl}/prayers`
+    }
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Православные молитвы',
+        description: 'Здесь собраны основные православные молитвы для ежедневного чтения и молитвенной жизни.',
+        url: `${siteUrl}/prayers`,
+        inLanguage: 'ru-RU',
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'Дом свечи',
+          url: siteUrl
+        },
+        about: {
+          '@type': 'Thing',
+          name: 'Православные молитвы',
+          description: 'Молитвослов с православными молитвами для ежедневного чтения'
+        }
+      })
+    }
+  ]
+});
+
 const loading = ref(false);
 const loadingMore = ref(false);
 const displayedPrayers = ref<any[]>([]);

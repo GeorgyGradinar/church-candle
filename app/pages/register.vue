@@ -60,6 +60,46 @@ import AuthorizationInput from "~/components/auth/AuthorizationInput.vue";
 import authRequests from "~/mixins/requests/auth";
 import validation from "~/mixins/validation.js";
 
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+useHead({
+  title: 'Регистрация',
+  meta: [
+    {
+      name: 'description',
+      content: 'Заполните форму регистрации, чтобы сохранять историю записок и пожертвований. Создайте аккаунт для удобного управления вашими молитвенными просьбами.'
+    },
+    {
+      name: 'robots',
+      content: 'noindex, nofollow'
+    },
+    // Open Graph
+    {
+      property: 'og:title',
+      content: 'Регистрация - Дом свечи'
+    },
+    {
+      property: 'og:description',
+      content: 'Заполните форму регистрации, чтобы сохранять историю записок и пожертвований.'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    },
+    {
+      property: 'og:url',
+      content: `${siteUrl}/register`
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `${siteUrl}/register`
+    }
+  ]
+});
+
 const {mapErrors} = validation();
 const {registration} = authRequests();
 

@@ -59,6 +59,86 @@ import { useLivingIconsStore } from "~/stores/livingIconsStore.js";
 import { useAuthStore } from "~/stores/mainStore.js";
 import IconCard from "~/components/IconCard.vue";
 
+const config = useRuntimeConfig();
+const siteUrl = config.public.SITE_URL || '';
+
+useHead({
+  title: 'Молитвы о здравии - Записки о здравии',
+  meta: [
+    {
+      name: 'description',
+      content: 'Подайте имена живых, за которых просите молитвы о здравии, укреплении и благополучии. Записки принимаются ежедневно, в день службы их передают на клирос.'
+    },
+    {
+      name: 'keywords',
+      content: 'молитвы о здравии, записки о здравии, поминовение о здравии, церковные записки, молебен о здравии, акафист о здравии, литургия о здравии'
+    },
+    // Open Graph
+    {
+      property: 'og:title',
+      content: 'Молитвы о здравии - Записки о здравии'
+    },
+    {
+      property: 'og:description',
+      content: 'Подайте имена живых, за которых просите молитвы о здравии, укреплении и благополучии.'
+    },
+    {
+      property: 'og:type',
+      content: 'website'
+    },
+    {
+      property: 'og:url',
+      content: `${siteUrl}/living`
+    },
+    {
+      property: 'og:locale',
+      content: 'ru_RU'
+    },
+    // Twitter Card
+    {
+      name: 'twitter:card',
+      content: 'summary_large_image'
+    },
+    {
+      name: 'twitter:title',
+      content: 'Молитвы о здравии - Записки о здравии'
+    },
+    {
+      name: 'twitter:description',
+      content: 'Подайте имена живых, за которых просите молитвы о здравии, укреплении и благополучии.'
+    }
+  ],
+  link: [
+    {
+      rel: 'canonical',
+      href: `${siteUrl}/living`
+    }
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Молитвы о здравии',
+        description: 'Подайте имена живых, за которых просите молитвы о здравии, укреплении и благополучии.',
+        url: `${siteUrl}/living`,
+        inLanguage: 'ru-RU',
+        isPartOf: {
+          '@type': 'WebSite',
+          name: 'Дом свечи',
+          url: siteUrl
+        },
+        about: {
+          '@type': 'Thing',
+          name: 'Молитвы о здравии',
+          description: 'Церковные записки и поминовение о здравии живых'
+        }
+      })
+    }
+  ]
+});
+
 const iconsStore = useLivingIconsStore();
 const { iconsLiving } = storeToRefs(iconsStore);
 const { getAllIcons } = iconsRequests();

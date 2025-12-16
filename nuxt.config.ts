@@ -14,4 +14,22 @@ export default defineNuxtConfig({
   },
 
   modules: ['nuxt-svgo', '@pinia/nuxt'],
+
+  app: {
+    head: {
+      htmlAttrs: {
+        lang: 'ru'
+      },
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      titleTemplate: '%s | Дом свечи',
+      meta: [
+        { name: 'format-detection', content: 'telephone=no' },
+        { name: 'theme-color', content: '#ffffff' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
+    }
+  }
 })
