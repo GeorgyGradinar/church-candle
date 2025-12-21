@@ -8,78 +8,51 @@
       </p>
     </header>
 
-    <div class="search-section">
-      <input
-          v-model="searchQuery"
-          @input="handleSearch"
-          type="text"
-          placeholder="Поиск по молитвам..."
-          class="search-input"
+    <PrayerSearch
+        v-model="searchQuery"
+        @clear="clearSearch"
+        @update:model-value="handleSearch"
+    />
+
+    <div v-if="searchQuery" class="search-filter">
+      <span class="search-filter-text">Поиск: "{{ searchQuery }}"</span>
+      <button
+          @click="clearSearch"
+          class="search-filter-clear"
+          type="button"
       >
+        Очистить фильтр
+      </button>
     </div>
 
-    <div v-if="loading && displayedPrayers.length === 0" class="loading">
-      <p>Загрузка молитв...</p>
-    </div>
+    <PrayerCategories v-if="!searchQuery" />
 
-    <div v-else class="prayers-list">
-      <article
-          v-for="prayer in displayedPrayers"
-          :key="prayer.id"
-          class="prayer-card"
-      >
-        <div class="prayer-header">
-          <h3>{{ prayer.title || prayer.Title || 'Без названия' }}</h3>
-          <span
-              v-if="prayer.section"
-              class="prayer-category"
-          >
-            {{ prayer.section }}
-          </span>
-        </div>
-
-        <div class="prayer-content">
-          <div class="prayer-text" v-html="formatPrayerText(getPrayerText(prayer))"></div>
-        </div>
-
-        <div class="prayer-actions">
-          <button
-              @click="goToPrayer(prayer)"
-              class="expand-btn"
-          >
-            Читать полностью
-          </button>
-        </div>
-
-        <div v-if="getPrayerNote(prayer)" class="prayer-note">
-          <small>{{ getPrayerNote(prayer) }}</small>
-        </div>
-      </article>
-    </div>
-
-    <div v-if="loadingMore" class="loading-more">
-      <p>Загрузка...</p>
-    </div>
-
-    <div v-if="!hasMore && displayedPrayers.length > 0" class="end-message">
-      <p>Все молитвы загружены</p>
-    </div>
-
-    <div v-if="!loading && displayedPrayers.length === 0" class="no-results">
-      <p>{{ searchQuery ? 'Молитвы не найдены. Попробуйте изменить критерии поиска.' : 'Молитвы не найдены.' }}</p>
-    </div>
-
-    <div v-if="!searchQuery" ref="observerTarget" class="observer-target"></div>
+    <PrayersList
+        ref="prayersListRef"
+        :prayers="displayedPrayers"
+        :loading="loading"
+        :loading-more="loadingMore"
+        :has-more="hasMore"
+        :has-search-query="!!searchQuery"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { HEADER_PARAMETERS, STRAPI_TOKEN } from "~/configs/config.js";
 import getHeaders from "~/mixins/createHeaders.js";
+import PrayerSearch from "~/components/prayers/PrayerSearch.vue";
+import PrayerCategories from "~/components/prayers/PrayerCategories.vue";
+import PrayersList from "~/components/prayers/PrayersList.vue";
+
+const route = useRoute();
+const router = useRouter();
 
 const config = useRuntimeConfig();
 const siteUrl = config.public.SITE_URL || '';
+
+const prayersListRef = ref<InstanceType<typeof PrayersList> | null>(null);
 
 useHead({
   title: 'Православные молитвы - Молитвослов',
@@ -161,15 +134,29 @@ useHead({
 const loading = ref(false);
 const loadingMore = ref(false);
 const displayedPrayers = ref<any[]>([]);
-const observerTarget = ref<HTMLElement | null>(null);
 const hasMore = ref(true);
 const currentPage = ref(1);
 const pageSize = 10;
-const searchQuery = ref("");
+
+// Инициализируем searchQuery из URL сразу при создании компонента
+function getSearchFromUrl(): string {
+  const search = route.query.search;
+  if (search && typeof search === 'string') {
+    try {
+      return decodeURIComponent(search);
+    } catch {
+      return search;
+    }
+  }
+  return '';
+}
+
+const searchQuery = ref(getSearchFromUrl());
+
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 let observer: IntersectionObserver | null = null;
 
-// Загрузка молитв из API
+// Загрузка молитв из API (только для поиска)
 async function loadPrayers(page: number = 1, search: string = "") {
   if (loading.value && page === 1) return;
   if (loadingMore.value && page > 1) return;
@@ -277,6 +264,19 @@ function handleSearch() {
     clearTimeout(searchTimeout);
   }
 
+  // Обновляем URL с query параметром
+  if (searchQuery.value.trim()) {
+    router.push({
+      path: route.path,
+      query: { search: searchQuery.value.trim() }
+    });
+  } else {
+    router.push({
+      path: route.path,
+      query: {}
+    });
+  }
+
   // Сбрасываем страницу и загруженные данные
   currentPage.value = 1;
   displayedPrayers.value = [];
@@ -289,7 +289,7 @@ function handleSearch() {
 
 // Настройка Intersection Observer для infinite scroll
 function setupObserver() {
-  if (!observerTarget.value) return;
+  if (!prayersListRef.value?.observerTarget) return;
 
   // Отключаем предыдущий observer, если он существует
   if (observer) {
@@ -299,7 +299,7 @@ function setupObserver() {
   observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && hasMore.value && !loadingMore.value && !loading.value && !searchQuery.value) {
+          if (entry.isIntersecting && hasMore.value && !loadingMore.value && !loading.value && searchQuery.value) {
             loadMorePrayers();
           }
         });
@@ -309,71 +309,61 @@ function setupObserver() {
       }
   );
 
-  observer.observe(observerTarget.value);
+  observer.observe(prayersListRef.value.observerTarget);
 }
+
 
 // Отслеживаем изменения поискового запроса
 watch(searchQuery, (newValue) => {
   // При поиске отключаем observer
   if (observer && newValue) {
     observer.disconnect();
-  } else if (!newValue && observerTarget.value) {
-    // При очистке поиска загружаем все молитвы и включаем observer обратно
-    currentPage.value = 1;
-    displayedPrayers.value = [];
-    loadPrayers(1);
+  } else if (!newValue && prayersListRef.value?.observerTarget) {
+    // При очистке поиска включаем observer обратно
     setTimeout(() => {
       setupObserver();
     }, 500);
   }
 });
 
-function isLongPrayer(prayer: any): boolean {
-  const text = getPrayerText(prayer);
-  return !!(text && text.length > 300);
-}
-
-function goToPrayer(prayer: any) {
-  // Используем slug, если есть, иначе используем id как fallback
-  const slug = prayer.slug || String(prayer.id);
-  if (slug) {
-    navigateTo(`/prayers/${ slug }`);
+function clearSearch() {
+  searchQuery.value = '';
+  router.push({
+    path: route.path,
+    query: {}
+  });
+  displayedPrayers.value = [];
+  currentPage.value = 1;
+  if (observer) {
+    observer.disconnect();
   }
 }
 
-function formatPrayerText(text: string): string {
-  if (!text) return '';
-
-  // Разделяем текст на предложения и форматируем
-  return text
-      .split(/[.!?]\s+/)
-      .filter(s => s.trim().length > 0)
-      .map((sentence, index, array) => {
-        const trimmed = sentence.trim();
-        if (index < array.length - 1 && !trimmed.endsWith('.') && !trimmed.endsWith('!') && !trimmed.endsWith('?')) {
-          return trimmed + '.';
-        }
-        return trimmed;
-      })
-      .join('<br><br>');
-}
-
-function getPrayerText(prayer: any): string {
-  return prayer.text || prayer.Text || prayer.content || '';
-}
-
-function getPrayerNote(prayer: any): string {
-  return prayer.note || prayer.Note || prayer.description || '';
-}
-
 onMounted(() => {
-  // Загружаем первую страницу
-  loadPrayers(1);
+  console.log(route.query)
+  // Проверяем наличие поискового запроса в URL
+  const searchFromUrl = route.query.search as string | undefined;
 
-  // Настраиваем observer после загрузки данных
-  setTimeout(() => {
-    setupObserver();
-  }, 500);
+  console.log(searchFromUrl)
+
+  if (searchFromUrl) {
+    try {
+      const decoded = decodeURIComponent(searchFromUrl);
+      searchQuery.value = decoded;
+      // Загружаем результаты поиска
+      loadPrayers(1, decoded);
+      setTimeout(() => {
+        setupObserver();
+      }, 500);
+    } catch {
+      // Если декодирование не удалось, используем исходное значение
+      searchQuery.value = searchFromUrl;
+      loadPrayers(1, searchFromUrl);
+      setTimeout(() => {
+        setupObserver();
+      }, 500);
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -415,187 +405,38 @@ onUnmounted(() => {
     }
   }
 
-  .search-section {
-    margin-bottom: 2rem;
-
-    .search-input {
-      width: 100%;
-      padding: 0.85rem 1rem;
-      border: 1px solid #cbd5f5;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-family: inherit;
-      transition: border-color 0.2s ease;
-
-      &:focus {
-        outline: none;
-        border-color: #0ea5e9;
-      }
-
-      &::placeholder {
-        color: #94a3b8;
-      }
-    }
-
-    .categories {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-
-      .category-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid #cbd5f5;
-        border-radius: 999px;
-        background: #fff;
-        color: #475569;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-          border-color: #0ea5e9;
-          color: #0ea5e9;
-        }
-
-        &.active {
-          background: #0ea5e9;
-          border-color: #0ea5e9;
-          color: #fff;
-        }
-      }
-    }
-  }
-
-  .prayers-list {
+  .search-filter {
     display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #f1f5f9;
+    border-radius: 8px;
 
-  .prayer-card {
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 1.5rem;
-    background-color: #fff;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-    &:hover {
-      border-color: #cbd5f5;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    .search-filter-text {
+      color: #475569;
+      font-size: 0.9rem;
     }
 
-    .prayer-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-      gap: 1rem;
+    .search-filter-clear {
+      padding: 0.5rem 1rem;
+      border: 1px solid #cbd5f5;
+      border-radius: 6px;
+      background: #fff;
+      color: #475569;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
 
-      h3 {
-        margin: 0;
-        color: #0f172a;
-        font-size: 1.25rem;
-        flex: 1;
-      }
-
-      .prayer-category {
-        padding: 0.25rem 0.75rem;
-        border-radius: 999px;
-        background: #f1f5f9;
-        color: #64748b;
-        font-size: 0.8rem;
-        white-space: nowrap;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        user-select: none;
-
-        &:hover {
-          background: #e0f2fe;
-          color: #0369a1;
-        }
-
-        &:active {
-          transform: scale(0.95);
-        }
-      }
-    }
-
-    .prayer-content {
-      margin-bottom: 1rem;
-
-      .prayer-text {
-        color: #475569;
-        line-height: 1.8;
-        font-size: 1rem;
-        max-height: 200px;
-        overflow: hidden;
-        transition: max-height 0.3s ease;
-
-        :deep(br) {
-          margin-bottom: 0.5rem;
-        }
-      }
-    }
-
-    .prayer-actions {
-      display: flex;
-      gap: 0.75rem;
-      margin-bottom: 0.5rem;
-
-      button {
-        padding: 0.5rem 1rem;
-        border: 1px solid #cbd5f5;
-        border-radius: 8px;
-        background: #fff;
-        color: #475569;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        width: 100%;
-
-        &:hover {
-          border-color: #0ea5e9;
-          color: #0ea5e9;
-        }
-      }
-    }
-
-    .prayer-note {
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid #f1f5f9;
-
-      small {
-        color: #64748b;
-        font-style: italic;
+      &:hover {
+        border-color: #0ea5e9;
+        color: #0ea5e9;
       }
     }
   }
 
-  .no-results {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #64748b;
-  }
-
-  .loading,
-  .loading-more {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: #64748b;
-  }
-
-  .end-message {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: #94a3b8;
-    font-size: 0.9rem;
-  }
-
-  .observer-target {
-    height: 1px;
-    width: 100%;
-  }
 }
 
 @media (max-width: 640px) {
@@ -604,36 +445,6 @@ onUnmounted(() => {
 
     header h1 {
       font-size: 1.5rem;
-    }
-
-    .search-section {
-      .categories {
-        .category-btn {
-          font-size: 0.85rem;
-          padding: 0.45rem 0.85rem;
-        }
-      }
-    }
-
-    .prayer-card {
-      padding: 1.25rem;
-
-      .prayer-header {
-        flex-direction: column;
-        gap: 0.5rem;
-
-        .prayer-category {
-          align-self: flex-start;
-        }
-      }
-
-      .prayer-actions {
-        flex-direction: column;
-
-        button {
-          width: 100%;
-        }
-      }
     }
   }
 }
