@@ -5,7 +5,16 @@
         <button @click="$emit('close')" class="close-btn">✕</button>
         
         <div v-if="selectedDate" class="day-details">
-          <h2 class="modal-title">{{ formattedDate }}</h2>
+          <div class="modal-header">
+            <h2 class="modal-title">{{ formattedDate }}</h2>
+            <NuxtLink 
+              :to="dayPageUrl" 
+              class="view-page-btn"
+              @click="$emit('close')"
+            >
+              Открыть страницу дня →
+            </NuxtLink>
+          </div>
           
           <div v-if="events.length > 0" class="events-details">
             <article
@@ -69,6 +78,12 @@ const formattedDate = computed(() => {
   return `${dayOfWeek}, ${props.selectedDate.day} ${monthNames[props.selectedDate.month - 1]} ${props.selectedDate.year}`;
 });
 
+const dayPageUrl = computed(() => {
+  if (!props.selectedDate) return '';
+  const dateString = `${props.selectedDate.year}-${String(props.selectedDate.month).padStart(2, '0')}-${String(props.selectedDate.day).padStart(2, '0')}`;
+  return `/calendar/${dateString}`;
+});
+
 function getEventTypeName(type: string): string {
   const category = categories.find(c => c.id === type);
   return category ? category.name : type;
@@ -124,11 +139,41 @@ function getEventTypeName(type: string): string {
     }
   }
 
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-right: 3rem;
+  }
+
   .modal-title {
     font-size: 1.75rem;
     color: #0f172a;
-    margin-bottom: 1.5rem;
-    padding-right: 3rem;
+    margin: 0;
+    flex: 1;
+  }
+
+  .view-page-btn {
+    padding: 0.5rem 1rem;
+    border: 2px solid #0ea5e9;
+    border-radius: 8px;
+    background: #fff;
+    color: #0ea5e9;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &:hover {
+      background: #0ea5e9;
+      color: #fff;
+    }
   }
 
   .events-details {
@@ -275,8 +320,19 @@ function getEventTypeName(type: string): string {
   .modal-content {
     padding: 1.5rem;
 
+    .modal-header {
+      flex-direction: column;
+      gap: 1rem;
+      padding-right: 0;
+    }
+
     .modal-title {
       font-size: 1.35rem;
+    }
+
+    .view-page-btn {
+      width: 100%;
+      justify-content: center;
     }
 
     .events-details .event-detail-card {
